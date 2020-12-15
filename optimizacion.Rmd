@@ -1,0 +1,403 @@
+---
+title: "Práctica 2"
+output: pdf_document
+author:
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(practica2)
+```
+
+# Evaluación de la práctica
+
+Entrega un fichero global donde se recopilen todas las actividades realizadas durante las prácticas. Para ello, haz uso del formato de KnitR para exportar un fichero PDF final con diferentes comentarios. La nota final dependerá de varios factores:
+- La profundidad del análisis realizado en cada apartado, así como las conclusiones extraídas para la comparación de los distintos métodos de optimización.
+- La realización de las extensiones de los programas propuestos a lo largo de las diferentes secciones.
+- El uso y adaptación de las técnicas de búsqueda a otros problemas, o la prueba y comparación con distintos parámetros y características de los métodos.
+
+# Definición del problema de viajante de comercio
+
+
+### Ejercicio 1
+
+Describa una posible de representación del problema de viajante de comercio. Complete en el fichero `TSP.R` (disponible en la carpeta `R` la función `tsp.evaluation` a optimizar que corresponde con dicha representación.
+
+
+# Búsqueda a ciegas: Método de Montecarlo
+
+Montecarlo es un método numérico versátil, fácil de implementar y aplicable a problemas de alta dimensión, que va desde la física hasta las finanzas. El método consiste en una generación aleatoria de $N$ puntos, utilizando una distribución de probabilidad dada sobre el dominio del problema. La complejidad del esfuerzo computacional es $O(N)$.
+
+En esta práctica utilizaremos una implementación muy simple de la búsqueda de Montecarlo, que adopta la distribución uniforme $U(min, max)$. Esta función se corresponde con `mcsearch` y está implementada en `Montecarlo.R`.
+
+Para simplificar el análisis de los resultados obtenidos, utilizaremos un código que resuelve las funciones reales "sphere" y "rastrigin".
+
+## Actividades
+
+### Ejercicio 1
+
+Comente las diferencias en los resultados entre $D=2$ y $D=30$ de acuerdo a lo cerca o lejos que están los valores obtenidos del óptimo global.
+
+
+```{r mc.ejercicio1}
+# real-value functions: sphere and rastrigin:
+N <- 10000 # set the number of samples
+cat("monte carlo search (N:",N,")\n")
+
+dimensions <- c(2,30)
+label <- "sphere"
+
+results <- lapply(dimensions,
+                  function(d){
+                    search.space <- list(lower = rep(-5.2, d), upper = rep(5.2, d)) 
+                    search <- mcsearch(N = N, lower = search.space$lower, 
+                                       upper = search.space$upper, FUN = sphere)
+                    cat(label,"D:", d, "; s:", search$sol[1:2], "; f:", search$eval,"\n")
+                    list(D = d, solution = search$sol, f = search$eval)
+                  })
+
+
+label="rastrigin"
+results <- lapply(dimensions,
+                  function(d){
+                    search.space <- list(lower = rep(-5.2, d), upper = rep(5.2, d))
+                    search <- mcsearch(N = N, lower = search.space$lower, 
+                                       upper = search.space$upper, FUN = rastrigin)
+                    cat(label,"D:", d, "; s:", search$sol[1:2], "; f:", search$eval,"\n")
+                    list(D = d, solution = search$sol, f = search$eval)
+                  })
+```
+
+### Ejercicio 2
+
+Considere la función rastrigin con una dimensión de $D = 30$. Usando el método Montecarlo, explore diferentes valores de $N$ dentro del rango $\{100, 1000, 10000\}$.
+
+```{r mc.ejercicio2.rastrigin}
+dimension <- 30
+N <- c(100, 1000, 10000)
+```
+
+
+### Ejercicio 3
+
+Ejecute 30 ejecuciones para cada valor de $N$ y compare si las diferencias medias son estadísticamente significativas en el nivel de confianza del 95\% bajo una prueba de t-student por pares. También, traza los boxplots para
+los resultados debido a cada valor de $N$.
+
+Nota: Usa `proc.time()` para obtener el tiempo de ejecución en cada caso.
+
+
+```{r}
+results.N <- lapply(N, function(n){
+  
+  search.space <- list(lower = rep(-5.2, d), upper = rep(5.2, d))
+  
+  for(i in 1:30)
+                    search <- mcsearch(N = N, lower = search.space$lower, 
+                                       upper = search.space$upper, FUN = rastrigin)
+                solluciones[i, ]<-search$sol
+                
+                    
+                    
+  # return(list(time, solutions, f.values))
+})
+
+# Prueba t-student
+
+# boxplot
+```
+
+
+# Búsqueda local
+
+En contraste con los métodos ciegos de búsqueda presentados en la sección anterior, las técnicas de optimización modernas se basan en una búsqueda guiada, donde se generan nuevas soluciones a partir de soluciones existentes.
+
+
+## Hill Climbing
+
+La escalada en colina es un método de optimización local simple que sube" la colina hasta que se encuentra un óptimo local (suponiendo una meta de maximización).
+
+El método trabaja por iterativo buscando nuevas soluciones en el vecindario de la solución actual, adoptando nuevas soluciones si y solo si son mejores. El propósito del cambio de función (operador de vecino) es producir una solución ligeramente diferente, realizando una búsqueda completa en todo el vecindario o aplicando un pequeño cambio aleatorio en los valores de la solución actual. Debe tenerse en cuenta que aunque el algoritmo de ascenso de colinas estándar es determinista, cuando se utilizan cambios aleatorios para perturbar una solución, se logra uncomportamiento estocástico.
+
+Hay varias variantes de escalada en colinas, como la subida más empinada, que busca hasta $N$ posibles soluciones en el vecindario de la solución actual y luego adopta la mejor; y la subida de colina estocástica, que sustituye a la función de selección determinista, seleccionando nuevas soluciones con una probabilidad de $P$ (una estrategia similar se realiza por el método de enfriamiento simulado, discutido en la siguiente subsección).
+
+### Ejercicio 1
+
+La función que implementa el médodo de ascenso de colinas es `hclimbing`, implementada en `hill.R`. La función de cambio (`hchange`) es el operador de vecino y produce una pequeña perturbación sobre una solución dada (`par`). Dado el objetivo de obtener una pequeña perturbación, en esta práctica se adopta la distribución normal $\mathcal{N}(0, 1)$, correspondiendo a los argumentos `dist=rnorm, mean=0, sd=1`.  Realiza los comentarios que consideres oportunos.
+
+
+```{r hc.sumbits}
+D <- 8 # dimension
+C <- list(maxit=10,REPORT=1) # maximum of 10 iterations
+initial.solution <- rep(0,D) # c(0,0,0,0,...)
+
+# Binary Change
+bchange <- function(par, lower =rep(0,D), upper=rep(1,D)){ 
+  D <- length(par)
+  hchange(par,lower,upper,rnorm,mean=0,sd=1)
+}
+
+hclimbing(initial.solution, sumbin, change=bchange,
+          lower =rep(0,D), upper=rep(1,D),
+          control=C, type="max")
+```
+
+```{r hc.sphere}
+D <- 2 
+C <- list(maxit=100,REPORT=1000)
+initial.solution <- runif(D,-5.2,5.2)
+
+rchange <- function(par,lower,upper){ 
+  hchange(par,lower,upper,rnorm,mean=0,sd=0.5,round=FALSE) 
+}
+
+hclimbing(initial.solution,sphere,change=rchange,lower=rep(-5.2,D),
+          upper=rep(5.2,D),control=C,type="min")
+```
+
+## Enfriamiento simulado
+
+El enfriamiento simulado es una variante de la técnica de ascenso de colinas que se propuso en la década de los 80 y que se inspira en el fenómeno del enfriamiento de la metalurgia, que implica primero calentar un metal en particular y luego realizar un enfriamiento controlado.
+
+Este método de un solo estado difiere de la búsqueda de ascenso de colinas al adoptar un parámetro de temperatura de control ($T$) que se utiliza para calcular la probabilidad de aceptar soluciones inferiores. En contraste con la subida estocástica de colinas, que adopta un valor fijo para $T$, el enfriamiento simulado utiliza un valor de temperatura variable durante la búsqueda.
+
+### Ejercicio 1
+
+Prueba el enfriamiento simulado con la `sumbits` y la función `sphere`. Realiza los comentarios que consideres oportunos. 
+
+```{r sann.bin}
+minsumbin <- function(x) (length(x)-sum(x)) # optim only minimizes!
+
+# SANN for sum of bits, one run:
+D <- 8 # dimension
+initial.solution <- rep(0,D) # c(0,0,0,0,...)
+C <- list(maxit=10,temp=10,tmax=1,trace=TRUE,REPORT=1)
+
+s <- optim(initial.solution,minsumbin,
+           gr=bchange, method="SANN", control=C)
+cat("best:",s$par,"f:",s$value,"(max: fs:",sum(s$par),")\n")
+```
+
+
+
+```{r sann.sphere}
+D <- 2
+C <- list(maxit=10000,temp=1000,trace=TRUE,REPORT=10)
+
+initial.solution <- runif(D,-5.2,5.2) # initial search
+
+# SANN with default change (gr) function:
+s <- optim(initial.solution, sphere,
+           method = "SANN", control = C)
+cat("best:",s$par,"f:",s$value,"\n")
+```
+
+
+## Comparación de los métodos de búsqueda local
+
+La comparación de los métodos de optimización no es una tarea trivial. El teorema de no free lunch afirma que todos los métodos de búsqueda tienen un rendimiento global similar cuando se comparan con todas las funciones posibles.
+
+Sin embargo, el conjunto de todas las funciones incluye funciones aleatorias y engañosas, que a menudo no son interesantes de optimizar. Una respuesta constructiva al teorema consiste en definir un subconjunto de funciones "buscables" en las que el teorema no se mantiene, comparando la ejecución promedio de varios algoritmos en este subconjunto. Sin embargo, incluso si se selecciona un subconjunto interesante de funciones y métodos, existen otras cuestiones relevantes para una comparación sólida: cómo ajustar los parámetros de control de un método (por ejemplo, T de enfriamiento simulado) y qué métricas de rendimiento y pruebas estadísticas deben adoptarse.
+
+Por lo tanto, en lugar de presentar una comparación completa, esta sección presenta un ejemplo del código R de cómo se pueden comparar los métodos de optimización, asumiendo algunas suposiciones razonables. En este ejemplo usaremos la función `rastrigin` con $D = 20$ y comparamos tres métodos: Montecarlo, ascenso de colinas, y enfriamiento simulado.
+
+Para evitar cualquier sesgo hacia un método, se utiliza la misma función de cambio para el ascenso de colinas y las estrategias de enfriamiento simulado y se adoptan los valores de optimización predeterminados (T = 10, tmax = 10) para la última estrategia de búsqueda. Para todos los métodos se utiliza el mismo número máximo de iteraciones (`maxit = 10000`). En lugar de comparar sólo el mejor valor final, la comparación se realiza a lo largo de la ejecución de la búsqueda. Algunas medidas de ejecución de la búsqueda pueden ser engañosas, tales como el tiempo transcurrido, que puede depender de la carga de trabajo del procesador, o el número de iteraciones, cuyo esfuerzo computacional depende del tipo de búsqueda.
+
+De este modo, el mejor valor se almacena para cada función de evaluación (de 1 a 10.000). Finalmente, se ejecutan un total de 50 ejecuciones para cada método, con las soluciones iniciales generadas aleatoriamente dentro del rango (-5.2; 5.2). Para agregar los resultados, se calculan las curvas de intervalos de confianza promedio y de los respectivos t-student 95% para obtener los mejores valores.
+
+
+```{r compare.conditions}
+runs <- 50
+dimension <- 20
+max.iter <- 10000
+domain.lower <- rep(-5.2, dimension)
+domain.upper <- rep(5.2, dimension)
+```
+
+```{r}
+#' Rastrigin Function
+#' @param x Real vector
+#' @return Rastrigin function
+#' @export
+trace.rastrigin <- function(x){
+  f <- sum(x^2 - 10*cos(2*pi*x) + 10)
+  
+  EV<<-EV+1 # increase evaluations
+  if(f<BEST) 
+    BEST<<-f
+  if(EV<=max.iter) 
+    trace[EV]<<-BEST
+  return(f)
+}
+```
+
+
+
+```{r compare.mc}
+trace <- numeric(max.iter)
+EV <- 0
+BEST <- Inf
+  
+results.mc <- lapply(1:runs, function(i){
+  trace <<- numeric(max.iter)
+  EV <<- 0
+  BEST <<- Inf
+  result <- mcsearch(max.iter,lower=domain.lower,upper=domain.upper,FUN=trace.rastrigin)
+  
+  return(list(result = result, trace = trace))
+})
+```
+
+```{r compare.hc}
+change.function.hc <- function(par,lower,upper){ 
+  hchange(par,lower=lower,upper=upper,rnorm,
+          mean=0,sd=0.5,round=FALSE) 
+}
+conditions.hc <- list(maxit=max.iter, REPORT=0)
+
+results.hc <- lapply(1:runs, function(i){
+  initial.solution <- runif(dimension,-5.2,5.2)
+  trace <<- numeric(max.iter)
+  EV <<- 0
+  BEST <<- Inf
+  result <-  hclimbing(initial.solution,trace.rastrigin,change=change.function.hc,
+                       lower=domain.lower, upper=domain.upper, 
+                       control=conditions.hc, type="min")
+  
+  return(list(result = result, trace = trace))
+})
+```
+
+
+```{r}
+conditions.sa <- list(maxit=max.iter,temp=10,trace=0)
+change.function.sa <- function(par,lower,upper){ 
+  hchange(par,lower=domain.lower,upper=domain.upper,rnorm,
+          mean=0,sd=0.5,round=FALSE) 
+}
+
+results.sa <- lapply(1:runs, function(i){
+  initial.solution <- runif(dimension,-5.2,5.2)
+  trace <<- numeric(max.iter)
+  EV <<- 0
+  BEST <<- Inf
+  result <- optim(initial.solution, trace.rastrigin, method="SANN",gr=change.function.sa,
+        control=conditions.sa)
+  return(list(result = result, trace = trace))
+})
+```
+
+```{r}
+results <- do.call(rbind, list(results.mc, results.hc, results.sa) %>%
+  lapply(function(x){
+    as.data.frame(t(apply(sapply(x, function(x) x$trace), 1, Rmisc::CI)))
+  }))
+results <- mutate(results,
+                  Algorithm = rep(c("Montecarlo", "Hill", "SA"), each = max.iter),
+                  Iteration = rep(1:max.iter, 3))
+
+
+ggplot2::ggplot(results, aes(x = Iteration, y = mean,  ymin = lower, ymax = upper,
+                             color = Algorithm,fill = Algorithm)) +
+  geom_line() +
+  geom_ribbon(alpha = 0.5)
+```
+
+### Ejercicio 1
+
+Comente la convergencia de los distintos métodos propuestos así como las diferencias significativas (estadísticas) entre los mismos. ¿A partir de qué número de iteraciones se producen estos cambios?¿Qué método es mejor y por qué?
+
+```{r ls.ej1}
+
+```
+
+
+### Ejercicio 2
+
+Adaptar la función `hclimbing` para aceptar un control adicional (parámetro N). 
+
+Cuando $N = 0$, rla función debe ejecutar la subida de colinas estánda, mientras que cuando $N > 0$, la función debe implementar el método de subida de colinas con mayor pendiente. 
+
+Esta última variante funciona mediante la búsqueda de las primeras soluciones de N vecinos dentro de cada iteración, con el fin de seleccionar la mejor solución nueva para ser comparada con el punto de búsqueda actual.
+
+```{r ls.ej2}
+
+```
+
+
+### Ejercicio 3
+
+Explora la optimización de la función binaria “max-sin” con una dimensión más alta (D = 16), bajo la subida de colinas y método de enfriamiento simulado. Utilice el vector cero como punto de partida y como máximo 20 iteraciones. Mostrar las soluciones optimizadas y los valores de evaluación.
+
+```{r ls.ej3}
+
+```
+
+
+# Búsqueda basada en poblaciones
+
+En la sección anterior, se presentaron varios métodos de búsqueda basados en la localidad, tales como la escalada de colinas y el enfriamiento simulado.
+
+Todos estos métodos son de un solo estado, operando así su esfuerzo alrededor del vecindario de una solución actual. Este tipo de búsqueda es simple y a menudo eficaz. Sin embargo, hay otra clase interesante de métodos de búsqueda, conocida como búsqueda basada en poblaciones, que utiliza un conjunto de soluciones candidatas en lugar de un único punto de búsqueda.
+
+Como se ha indicado, los métodos basados en poblaciones tienden a explorar regiones más diferentes del espacio de búsqueda, en comparación con los métodos de un solo estado. Como consecuencia, se puede llegar a una mayor diversidad en la configuración de nuevas soluciones, que se pueden crear no sólo cambiando ligeramente cada punto de búsqueda individual, sino también combinando atributos relacionados con dos (o más) puntos de búsqueda.
+
+
+## Algoritmos genéticos y evolutivos
+
+La computación evolutiva denota varios algoritmos de optimización inspirados en el fenómeno de selección natural y que incluyen una población de soluciones competidoras.
+
+Aunque no siempre está claramente definido, la distinción entre estos métodos se basa principalmente en cómo representar una solución y cómo se crean nuevas soluciones. Los algoritmos genéticos fueron propuestos por Holland en 1975. El método original trabajaba sólo en representaciones binarias y adoptó masivamente el operador crossover (cruce) para generar nuevas soluciones. Más recientemente, el término algoritmo evolutivo fue adoptado para referirse a las variantes de algoritmos genéticos que incluyen representaciones de valores reales y que adoptan operadores genéticos flexibles, que van desde el uso intensivo del crossover hasta sólo cambios en la mutación.
+
+Existe una terminología biológica asociada con los métodos de computación evolutivos. Por ejemplo, una solución candidata es a menudo llamada individuo, mientras que la población denota un grupo de individuos. El genotipo, genoma o cromosoma denota la representación de la estructura de datos individuo. Un gen es una posición de valor en tal representación y un alelo es un valor particular para un gen. La función de evaluación también se conoce como aptitud (fitness) y el fenotipo representa la forma en que el individuo opera durante la evaluación de fitness. La creación de nuevas soluciones se llama crianza y ocurre debido a la aplicación de operadores genéticos, tales como cruce y mutación. El cruce implica la selección de dos o más soluciones parentales para generar hijos, mientras que la mutación a menudo realiza un ligero cambio en un solo individuo.
+
+En esta práctica adoptaremos el algoritmo genético/evolutivo implementado por el paquete `genalg`, si bien es altamente recomendable chequear también el paquete `GA`”. La biblioteca `genalg` maneja las tareas de minimización y contiene dos funciones relevantes: `rbga.bin()`, para cromosomas binarios; y `rbga()`, para representaciones de valores reales.
+
+En esta primera parte de la práctica accede a la documentación del paquete `genalg` y ejecuta el ejemplo de la suma de bits que aparece en la ayuda: `help(rbga.bin)`.
+
+A continuación ejecuta el ejemplo para `sphere` (D = 2) con el código mostrado a continuación. En este ejemplo, el parámetro “monitor” se usa para trazar la población de soluciones cada K generaciones, usando un esquema de coloración que va desde el gris claro (población inicial) hasta el oscuro (última generación). Este gradiente de coloración se logra utilizando la función de R `gray()`, que crea colores grises
+entre 1 (blanco) y 0 (negro).
+
+Aunque se usa una población muy pequeña (Np = 5, valor mínimo aceptado por `rbga`) se puede obtener como mejor solución evolucionada un valor s =(0.009, 0.003) con f = 0.056 que está muy cerca del óptimo (f = 0). Recuerda que diferentes ejecuciones con semillas diferentes darán lugar a valores distintos.
+
+
+```{r}
+library(genalg) # load genalg
+
+D <- 2
+maxit <- 100
+K <- 5# store population values every K generations
+i <- 1 # initial generation
+
+monitor <- function(obj){ 
+  if(i==1){ 
+    plot(obj$population,xlim=c(-5.2,5.2),ylim=c(-5.2,5.2),
+         xlab="x1",ylab="x2",type="p",pch=16,
+         col=gray(1-i/maxit))
+  }
+  else if(i%%K==0){
+    points(obj$population,pch=16,
+           col=gray(1-i/maxit))
+  }
+  
+  i<<-i+1 # global update
+}
+```
+
+```{r}
+set.seed(12345) # set for replicability purposes
+E <- rbga(rep(-5.2,D),rep(5.2,D), popSize=K,iters=maxit,
+       monitorFunc=monitor,evalFunc=sphere)
+
+b=which.min(E$evaluations) # best individual
+cat("best:",E$population[b,],"f:",E$evaluations[b],"\n")
+```
+
+```{r}
+rbga.results = rbga(c(1, 1), c(5, 10), monitorFunc=monitor, 
+    evalFunc=evaluate, verbose=TRUE, mutationChance=0.01)
+
+plot(rbga.results)
+plot(rbga.results, type="hist")
+plot(rbga.results, type="vars")
+```
+
