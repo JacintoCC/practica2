@@ -381,23 +381,38 @@ monitor <- function(obj){
   
   i<<-i+1 # global update
 }
-```
 
-```{r}
 set.seed(12345) # set for replicability purposes
 E <- rbga(rep(-5.2,D),rep(5.2,D), popSize=K,iters=maxit,
-       monitorFunc=monitor,evalFunc=sphere)
+          monitorFunc=monitor,evalFunc=sphere)
 
 b=which.min(E$evaluations) # best individual
 cat("best:",E$population[b,],"f:",E$evaluations[b],"\n")
 ```
 
 ```{r}
+i <- 1 # initial generation
 rbga.results = rbga(c(1, 1), c(5, 10), monitorFunc=monitor, 
-    evalFunc=evaluate, verbose=TRUE, mutationChance=0.01)
+    evalFunc=rastrigin, verbose=TRUE, mutationChance=0.01)
 
 plot(rbga.results)
 plot(rbga.results, type="hist")
 plot(rbga.results, type="vars")
 ```
 
+
+# Optimización TSP (BONUS)
+
+Esta sección contiene unos ejercicios adicionales y voluntarios. No realizar estos ejercicios (o no realizarlos correctamente) no impide obtener la máxima nota en la práctica. Se recomienda que se intenten únicamente si se ha completado y entendido la parte obligatoria. 
+
+En esta sección se abordará el problema de optimización para la definición dada del problema del viajante de comercio. 
+
+### Ejercicio 1
+
+Realice 10 experimentos independientes sobre el problema TSP usando las coordenadas `TSPa` usando 1000 evaluaciones:
+- Búsqueda de Montecarlo (implementada para este problema en la función `mcsearchTSP`)
+- Ascensión de colinas (implementada en `hclimbingTSP` y el operador de cambio `change.tsp`)
+- Enfriamiento simulado (usando la función `optim` usada en la parte obligatoria de la práctica)
+- Algoritmos genéticos (usando la función `ga` del paquete `GA` con el parámetro `type=permutation`)
+
+Obtenga un diagrama de caja para comparar los resultados obtenidos por los distintos algoritmos y comente los resultados. Incluya el gráfico de una de las soluciones obtenidas por cada método de búsqueda usando `plotTSP(solucion, coordenadas)`.
