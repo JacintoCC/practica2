@@ -12,7 +12,8 @@ Imports:
   ggplot2, 
   dplyr, 
   genalg, 
-  Rmisc
+  Rmisc,
+  GA
 RoxygenNote: 7.1.1
 Depends: R (>= 3.5.0)
 LazyData: true
